@@ -1,0 +1,16 @@
+;-------
+;
+;-------
+.MODEL SMALL
+.STACK 1000H
+.Data
+	CR EQU 0DH
+	LF EQU 0AH
+	number DB "00000$"
+	a DW 1 DUP (0000H)
+	b DW 1 DUP (0000H)
+	c DW 1 DUP (0000H)
+	SUB SP 2
+	SUB SP 2
+	SUB SP 2
+	SUB SP 2
