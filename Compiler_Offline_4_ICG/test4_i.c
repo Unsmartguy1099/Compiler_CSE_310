@@ -1,6 +1,7 @@
 int a,b,c;
 
 void func_a(){
+	
 	a = 7;
 }
 
@@ -18,6 +19,7 @@ int bar(int a, int b){
 int main(){
  
 	int i,j,k,l;
+	
 	
 	i = 5;
 	j = 6;

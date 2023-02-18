@@ -26,11 +26,15 @@ extern ofstream writer2;
 ofstream writer3;
 ofstream asmWriter;
 
-SymbolTable *symbolTable=new SymbolTable(50);
+SymbolTable *symbolTable=new SymbolTable(10);
 string global_array="";
 string local_array="";
 SymbolInfo *temp1;
 int stack_offset=0;
+int label_count=0;
+int curly_brace_count=0;
+string current_function="";
+int function_param_count=0;
 
 
 //----------Printer---------------------------------------------------------------------------------------
@@ -56,13 +60,47 @@ void asm_unit_var_array2(SymbolInfo* head){
 	asmWriter<<head->getName()+" DUP (0000H)"<<endl;;
 }
 
-void asm_state_var_single(SymbolInfo* head){
-	asmWriter<<"	SUB SP 2"<<endl;
+void asm_state_var_single(){
+	asmWriter<<"	SUB SP, 2"<<endl;
 }
-void asm_state_var_array2(SymbolInfo* head){
-	//asmWriter<<head->getName()+" DUP (0000H)"<<endl;;
-	for(int i=0;i<stoi(head->getName());i++)
-		asmWriter<<"	SUB SP 2"<<endl;
+			//function____________
+void asm_function_ID(SymbolInfo* head){
+	asmWriter<<head->getName()<<" "<<"PROC"<<endl;
+	asmWriter<<"	PUSH BP"<<endl;
+	asmWriter<<"	MOV BP, SP"<<endl;
+}
+
+void asm_function_ID_main(SymbolInfo* head){
+	asmWriter<<head->getName()<<" "<<"PROC"<<endl;
+	asmWriter<<"	MOV AX, @DATA"<<endl;
+	asmWriter<<"	MOV DS, AX"<<endl;
+	asmWriter<<"	PUSH BP"<<endl;
+	asmWriter<<"	MOV BP, SP"<<endl;
+	
+}
+
+void asm_function_end(){
+	if(current_function=="main")
+		{
+			if(stack_offset!=0)
+				asmWriter<<"	ADD SP, "<<stack_offset<<endl;
+			asmWriter<<"	POP BP"<<endl;
+			asmWriter<<"	MOV AX,4CH"<<endl;
+			asmWriter<<"	INT 21H"<<endl;
+			asmWriter<<"main ENDP"<<endl;
+		}
+	else{
+
+		if(stack_offset!=0)
+			asmWriter<<"	ADD SP,"<<stack_offset-2<<endl;
+		asmWriter<<"	POP BP"<<endl;
+		if(function_param_count==0)
+			asmWriter<<"	RET"<<endl;
+		else
+			asmWriter<<"	RET "<<function_param_count<<endl;
+		function_param_count=0;
+		asmWriter<<current_function<<" ENDP"<<endl;
+	}
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -82,6 +120,7 @@ bool check_local_var(string check){
 
 //---------State_machine-----------------------------------------------------------------------------------
 string Check_state_machine(SymbolInfo* head,string check){
+		//global_and_local_variable_and_array---------------------
 		if(name_type(head)=="unit : var_declaration"){
 			check= "unit_var";
 		}
@@ -121,7 +160,16 @@ string Check_state_machine(SymbolInfo* head,string check){
 		if(name_type(head)=="declaration_list : ID LTHIRD CONST_INT RTHIRD" && check_local_var(check)){
 			check= "state_var_array";
 		}
-
+		//function---------------------------------------------
+		if(name_type(head)=="unit : func_definition")
+			check="function_start";
+		if(name_type(head)=="parameter_list : parameter_list COMMA type_specifier ID"&& check=="function_start")
+			check="inside_param";
+		if(name_type(head)=="parameter_list : type_specifier ID"&& check=="function_start")
+			check="inside_param";
+		if(name_type(head)=="compound_statement : LCURL statements RCURL"&& check=="function_start")
+			check="inside_function";
+		
 		return check;
 }
 //----------------------------------------------------------------------------------------------------------
@@ -149,29 +197,70 @@ void asmWriter_parent(SymbolInfo* head, string check){
 		}
 		if(head->getType()=="ID" && check=="state_var_array")
 		{
-		
-			local_array=head->getName();
-			symbolTable->Insert(head->getName(),"local_array");			
+			local_array=head->getName();			
 		}	
 		if(head->getType()=="CONST_INT" && check=="state_var_array")
 		{
-			asm_state_var_array2(head);
-			temp1=symbolTable->Look_Up(local_array);
-			temp1->array_size=stoi(head->getName());
 			stack_offset=stack_offset+2;
-			temp1=symbolTable->Look_Up(local_array);
-			temp1->stack_offset=stack_offset;
-			stack_offset=(stoi(head->getName())-1)*2;
-
+			for(int i=0;i<stoi(head->getName());i++){
+				symbolTable->Insert(local_array+"["+to_string(i)+"]","local_array");
+				temp1=symbolTable->Look_Up(local_array+"["+to_string(i)+"]");
+				temp1->stack_offset=stack_offset;
+				stack_offset=stack_offset+2;
+				asm_state_var_single();
+			}
 		}
 		if(head->getType()=="ID" && check=="state_var_single")
 		{
-			asm_state_var_single(head);
+			asm_state_var_single();
 			symbolTable->Insert(head->getName(),"local_var");
 			stack_offset=stack_offset+2;
 			temp1=symbolTable->Look_Up(head->getName());
 			temp1->stack_offset=stack_offset;
 		}	
+
+		//function----------------------------------------
+		if(head->getType()=="ID" && check=="function_start")
+		{
+			//cout<<"----"<<head->getName()<<check<<endl;
+
+			if(head->getName()=="main")
+				{
+					asm_function_ID_main(head);
+					current_function="main";
+				}
+				
+			else
+			{
+				asm_function_ID(head);
+				current_function=head->getName();
+			}
+				
+			
+			symbolTable->Enter_Scope();
+			symbolTable->Insert(head->getName(),"function");
+			temp1=symbolTable->Look_Up(head->getName());
+			
+
+			stack_offset=0;
+			
+			
+		}
+
+		if(head->getType()=="ID"&& check=="inside_param")
+			{
+				symbolTable->Insert(head->getName(),"parameter");
+				function_param_count++;
+			}
+
+		if(head->getType()=="LCURL")
+			curly_brace_count++;
+		if(head->getType()=="RCURL")
+			{
+				curly_brace_count--;
+				if(curly_brace_count==0)
+					asm_function_end();
+			}
 			
 }
 //----------------------------------------------------------------------------------------------------------
@@ -195,11 +284,9 @@ void printTree(SymbolInfo* head, int depth, string check){
 		for (auto i : head->children) {
       	 printTree(i,depth+1,check);
    		 }
-
 }
 //------------------------------------------------------------------------------------------------------------
 void deleteTree(SymbolInfo* head){
-
 		if(head->children.size()==0)
 		{
 			delete head;
@@ -209,7 +296,6 @@ void deleteTree(SymbolInfo* head){
 			for (auto i : head->children) {
       	 		deleteTree(i);
    		 	}
-
 }
 
 

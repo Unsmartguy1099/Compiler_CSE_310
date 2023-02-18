@@ -23,7 +23,7 @@ class SymbolInfo{
         //----------------------for_ICG---------------------
         int array_size=0;
         int stack_offset=0;
-        //int curly_brace_count=0;
+        
         //--------------------------------------------------
 
         SymbolInfo(){
@@ -36,7 +36,6 @@ class SymbolInfo{
             isLeaf=true;
         //---------------------------------------------------
             array_size=0;
-           // curly_brace_count=0;
         }
 
         SymbolInfo(string type,string name){
@@ -50,7 +49,6 @@ class SymbolInfo{
             isLeaf=true;
         //---------------------------------------------------
             array_size=0;
-           //curly_brace_count=0;
 
         }
 
@@ -99,13 +97,13 @@ class ScopeTable{
             for(int j=0;j<Size;j++){
 
                 if(node[j].getName()!="")
-                    cout<<"        "<<j+1<<"--> <"<<node[j].getName()<<","<<node[j].getType()<<","<<node[j].stack_offset<<"> ";
+                    cout<<"        "<<j+1<<"--> <"<<node[j].getName()<<","<<node[j].getType()<<"> ";
                 else
                     cout<<"        "<<j+1<<"--> ";
                 temp=node[j].next;
                 while(temp!=nullptr)
                     {
-                        cout<<"<"<<temp->getName()<<","<<temp->getType()<<","<<temp->stack_offset<<"> ";
+                        cout<<"<"<<temp->getName()<<","<<temp->getType()<<"> ";
                         temp=temp->next;
                     }
                 cout<<endl;
