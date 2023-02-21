@@ -23,6 +23,7 @@ class SymbolInfo{
         //----------------------for_ICG---------------------
         int array_size=0;
         int stack_offset=0;
+        bool isGlobal=false;
         //int curly_brace_count=0;
         //--------------------------------------------------
 
@@ -36,6 +37,9 @@ class SymbolInfo{
             isLeaf=true;
         //---------------------------------------------------
             array_size=0;
+            isGlobal=false;
+            stack_offset=0;
+
            // curly_brace_count=0;
         }
 
@@ -50,6 +54,8 @@ class SymbolInfo{
             isLeaf=true;
         //---------------------------------------------------
             array_size=0;
+            isGlobal=false;
+            stack_offset=0;
            //curly_brace_count=0;
 
         }

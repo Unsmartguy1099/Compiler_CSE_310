@@ -31,10 +31,21 @@ string global_array="";
 string local_array="";
 SymbolInfo *temp1;
 int stack_offset=0;
+int stack_back_offset=0;
 int label_count=0;
 int curly_brace_count=0;
 string current_function="";
 int function_param_count=0;
+vector<string> op_stack;
+
+
+bool is_inside_expression_statement=false;
+bool is_inside_assignment_var=false;
+bool is_inside_expression=false;
+string function_name="";
+bool var_assginment=false;
+string temp_assign="";
+vector<string> param_stack;
 
 
 //----------Printer---------------------------------------------------------------------------------------
@@ -47,19 +58,15 @@ void asm_program(){
 	asmWriter<<"	LF EQU 0AH"<<endl;
 	asmWriter<<"	number DB \"00000$\""<<endl;
 }
-
 void asm_unit_var_single(SymbolInfo* head){
 	asmWriter<<"	"+head->getName()+" DW 1 DUP (0000H)"<<endl;
 }
-
 void asm_unit_var_array1(SymbolInfo* head){
 	asmWriter<<"	"+head->getName()+" DW ";
 }
-
 void asm_unit_var_array2(SymbolInfo* head){
 	asmWriter<<head->getName()+" DUP (0000H)"<<endl;;
 }
-
 void asm_state_var_single(){
 	asmWriter<<"	SUB SP, 2"<<endl;
 }
@@ -69,14 +76,12 @@ void asm_function_ID(SymbolInfo* head){
 	asmWriter<<"	PUSH BP"<<endl;
 	asmWriter<<"	MOV BP, SP"<<endl;
 }
-
 void asm_function_ID_main(SymbolInfo* head){
 	asmWriter<<head->getName()<<" "<<"PROC"<<endl;
 	asmWriter<<"	MOV AX, @DATA"<<endl;
 	asmWriter<<"	MOV DS, AX"<<endl;
 	asmWriter<<"	PUSH BP"<<endl;
 	asmWriter<<"	MOV BP, SP"<<endl;
-	
 }
 
 void asm_function_end(){
@@ -90,7 +95,6 @@ void asm_function_end(){
 			asmWriter<<"main ENDP"<<endl;
 		}
 	else{
-
 		if(stack_offset!=0)
 			asmWriter<<"	ADD SP,"<<stack_offset-2<<endl;
 		asmWriter<<"	POP BP"<<endl;
@@ -102,20 +106,61 @@ void asm_function_end(){
 		asmWriter<<current_function<<" ENDP"<<endl;
 	}
 }
+void asm_expression(){
+	while(op_stack.size()!=0){
+		string temp=op_stack.back();
+		op_stack.pop_back();
+		if(temp=="+")
+			{
+				asmWriter<<"	POP BX"<<endl;
+				asmWriter<<"	POP AX"<<endl;
+				asmWriter<<"	ADD AX, BX"<<endl;
+				asmWriter<<"	PUSH AX"<<endl;
+			}
+			//
+		if(temp=="-")
+			{
+				asmWriter<<"	POP BX"<<endl;
+				asmWriter<<"	POP AX"<<endl;
+				asmWriter<<"	SUB AX, BX"<<endl;
+				asmWriter<<"	PUSH AX"<<endl;
+			}
+			//
+		if(temp=="*")
+			{
+				asmWriter<<"	POP CX"<<endl;
+				asmWriter<<"	POP AX"<<endl;
+				asmWriter<<"	CWD"<<endl;
+				asmWriter<<"	MUL CX"<<endl;
+				asmWriter<<"	MOV AX, CX"<<endl;
+				asmWriter<<"	PUSH AX"<<endl;
+			}
+			//
+		if(temp=="=")
+			{	
+				asmWriter<<"	POP AX"<<endl;
+				asmWriter<<"	MOV"<<temp_assign<<", AX"<<endl;
+			}
+			//
+	}
+}
+
+
+
+
 //---------------------------------------------------------------------------------------------------------
 
 //---------Helper------------------------------------------------------------------------------------------
 string name_type(SymbolInfo* head){
 	return head->getType()+" : "+head->getName();
 }
-
 bool check_global_var(string check){
 	return (check=="unit_var" || check=="unit_var_single" || check=="unit_var_array");
 }
-
 bool check_local_var(string check){
 	return (check=="state_var" || check=="state_var_single" || check=="state_var_array");
 }
+	//expression_helper
 //---------------------------------------------------------------------------------------------------------
 
 //---------State_machine-----------------------------------------------------------------------------------
@@ -123,40 +168,31 @@ string Check_state_machine(SymbolInfo* head,string check){
 		//global_and_local_variable_and_array---------------------
 		if(name_type(head)=="unit : var_declaration"){
 			check= "unit_var";
-		}
-			
+		}	
 		if(name_type(head)=="statement : var_declaration"){
 			check= "state_var";
-		}
-			
+		}	
 		if(name_type(head)=="declaration_list : declaration_list COMMA ID" && check_global_var(check)){
 			check= "unit_var_single";
-		}
-			
+		}	
 		if(name_type(head)=="declaration_list : ID" && check_global_var(check)){
 			check= "unit_var_single";
 		}
-			
 		if(name_type(head)=="declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD" && check_global_var(check)){
 			check= "unit_var_array";
-		}
-			
+		}	
 		if(name_type(head)=="declaration_list : ID LTHIRD CONST_INT RTHIRD" && check_global_var(check)){
 			check= "unit_var_array";
-		}
-			
+		}	
 		if(name_type(head)=="declaration_list : declaration_list COMMA ID" && check_local_var(check) ){
 			check= "state_var_single";
 		}
-			
 		if(name_type(head)=="declaration_list : ID" && check_local_var(check) ){
 			check= "state_var_single";
 		}
-			
 		if(name_type(head)=="declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD" && check_local_var(check) ){
 			check= "state_var_array";
 		}
-
 		if(name_type(head)=="declaration_list : ID LTHIRD CONST_INT RTHIRD" && check_local_var(check)){
 			check= "state_var_array";
 		}
@@ -167,15 +203,50 @@ string Check_state_machine(SymbolInfo* head,string check){
 			check="inside_param";
 		if(name_type(head)=="parameter_list : type_specifier ID"&& check=="function_start")
 			check="inside_param";
+
 		if(name_type(head)=="compound_statement : LCURL statements RCURL"&& check=="function_start")
 			check="inside_function";
+
+		if(name_type(head)=="LCURL : {"&& check=="inside_function")
+		{
+			check="param_calculation";
+		}
+			
 		
+		
+		//expression-------------------------------------------
+			
+
+		if(name_type(head)=="expression_statement : expression SEMICOLON")
+			check="expression_statement";
+		if(name_type(head)=="expression : variable ASSIGNOP logic_expression")
+		{
+			check="var_assign";		
+		}
+		if(name_type(head)=="variable : ID" and check=="var_assign")
+		{
+			check="var_assign_id";			
+		}
+		if(name_type(head)=="logic_expression : rel_expression" and check=="var_assign")
+		{
+			check="inside_expression";		
+		}
+		if(name_type(head)=="factor : ID LPAREN argument_list RPAREN" and check=="inside_expression")
+		{
+			check="function_call";			
+		}
+		if(name_type(head)=="argument_list : arguments" and check=="function_call")
+		{
+			check="params";			
+		}
+	
 		return check;
 }
 //----------------------------------------------------------------------------------------------------------
 
 //--------writter_parent------------------------------------------------------------------------------------
 void asmWriter_parent(SymbolInfo* head, string check){
+		
 		if(name_type(head)=="start : program")
 			asm_program();
 		if(head->getType()=="ID" && check=="unit_var_array")
@@ -222,46 +293,153 @@ void asmWriter_parent(SymbolInfo* head, string check){
 		//function----------------------------------------
 		if(head->getType()=="ID" && check=="function_start")
 		{
-			//cout<<"----"<<head->getName()<<check<<endl;
-
 			if(head->getName()=="main")
 				{
 					asm_function_ID_main(head);
 					current_function="main";
-				}
-				
+				}	
 			else
 			{
 				asm_function_ID(head);
 				current_function=head->getName();
-			}
-				
-			
+			}	
 			symbolTable->Enter_Scope();
 			symbolTable->Insert(head->getName(),"function");
 			temp1=symbolTable->Look_Up(head->getName());
 			
-
 			stack_offset=0;
-			
-			
+			stack_back_offset=0;
 		}
-
 		if(head->getType()=="ID"&& check=="inside_param")
 			{
-				symbolTable->Insert(head->getName(),"parameter");
+				//symbolTable->Insert(head->getName(),"parameter");
+				//temp1=symbolTable->Look_Up(head->getName());
+				//temp1->stack_offset=
 				function_param_count++;
+				param_stack.push_back(head->getName());
 			}
-
 		if(head->getType()=="LCURL")
 			curly_brace_count++;
 		if(head->getType()=="RCURL")
 			{
 				curly_brace_count--;
-				if(curly_brace_count==0)
+				if(curly_brace_count==0){
 					asm_function_end();
+					//symbolTable->Exit();
+				}
+					
+
 			}
-			
+		if(check=="param_calculation")
+			{	
+				
+				stack_back_offset=4;
+				while(param_stack.size()!=0){
+				string param1=param_stack.back();
+				param_stack.pop_back();
+				symbolTable->Insert(param1,"local_var");
+				temp1=symbolTable->Look_Up(param1);
+				temp1->stack_offset=-stack_back_offset;
+				stack_back_offset=stack_back_offset+2;
+				}
+			}
+
+
+		//expression-----------------------------
+
+		if(head->getType()=="ID" && check=="var_assign_id")
+			{
+				// temp1=symbolTable->Look_Up(head->getName());
+				// if(temp1->getType()=="local_var"){
+				// 	asmWriter<<"	MOV AX, [BP-"<<temp1->stack_offset<<"]"<<endl;
+				// 	asmWriter<<"	PUSH AX"<<endl;
+				// }		
+				// if(temp1->getType()=="global_var"){
+				// 	asmWriter<<"	MOV AX, "<<head->getName()<<endl;
+				// 	asmWriter<<"	PUSH AX";
+				// }
+				temp1=symbolTable->Look_Up(head->getName());
+				if(temp1->getType()=="local_var"){
+					if(temp1->stack_offset>0)
+					temp_assign="[BP-"+to_string(temp1->stack_offset)+"]";
+					else
+					temp_assign="[BP+"+to_string(-temp1->stack_offset)+"]";
+				}		
+				if(temp1->getType()=="global_var"){
+					temp_assign=head->getName();
+				}
+
+				op_stack.push_back("=");
+			}
+		if(head->getType()=="ID" && check=="inside_expression")
+			{
+				
+				temp1=symbolTable->Look_Up(head->getName());
+				if(temp1->getType()=="local_var"){
+					if(temp1->stack_offset>0)
+					temp_assign="[BP-"+to_string(temp1->stack_offset)+"]";
+					else
+					temp_assign="[BP+"+to_string(-temp1->stack_offset)+"]";
+					asmWriter<<"	PUSH AX"<<endl;
+				}		
+				if(temp1->getType()=="global_var"){
+					asmWriter<<"	MOV AX, "<<head->getName()<<endl;
+					asmWriter<<"	PUSH AX";
+				}
+			}
+		if(head->getType()=="CONST_INT" && check=="inside_expression")
+			{
+					asmWriter<<"	MOV AX, "<<head->getName()<<endl;
+					asmWriter<<"	PUSH AX"<<endl;
+			}
+		if(head->getName()=="+" && check=="inside_expression")
+			{
+				op_stack.push_back("+");
+			}
+		if(head->getName()=="-" && check=="inside_expression")
+			{
+				op_stack.push_back("-");
+			}
+		if(head->getName()=="*" && check=="inside_expression")
+			{
+				op_stack.push_back("*");
+			}
+		if(head->getType()=="ID" && check=="function_call")
+			{
+				function_name=head->getName();
+			}
+		if(head->getType()=="RPAREN" && check=="function_call")
+			{
+				check="inside_expression";
+				asmWriter<<"	CALL "<<function_name<<endl;
+				asmWriter<<"	PUSH AX"<<endl;
+			}
+		if(head->getType()=="ID" && check=="params")
+			{
+				temp1=symbolTable->Look_Up(head->getName());
+				if(temp1->getType()=="local_var"){
+					if(temp1->stack_offset>0)
+					temp_assign="[BP-"+to_string(temp1->stack_offset)+"]";
+					else
+					temp_assign="[BP+"+to_string(-temp1->stack_offset)+"]";
+					asmWriter<<"	PUSH AX"<<endl;
+				}		
+				if(temp1->getType()=="global_var"){
+					asmWriter<<"	MOV AX, "<<head->getName()<<endl;
+					asmWriter<<"	PUSH AX";
+				}
+				
+			}
+		if(head->getType()=="CONST_INT"&& check=="params")
+			{
+				asmWriter<<"	MOV AX, "<<head->getName()<<endl;
+				asmWriter<<"	PUSH AX"<<endl;
+			}
+		if(head->getType()=="SEMICOLON" && check=="expression_statement")
+			{
+				asm_expression();
+				check="";
+			}
 }
 //----------------------------------------------------------------------------------------------------------
 
