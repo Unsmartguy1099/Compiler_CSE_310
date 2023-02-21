@@ -107,6 +107,7 @@ int curly_brace_count=0;
 string current_function="";
 int function_param_count=0;
 vector<string> op_stack;
+bool code=false;
 
 
 bool is_inside_expression_statement=false;
@@ -209,7 +210,7 @@ void asm_expression(){
 		if(temp=="=")
 			{	
 				asmWriter<<"	POP AX"<<endl;
-				asmWriter<<"	MOV"<<temp_assign<<", AX"<<endl;
+				asmWriter<<"	MOV "<<temp_assign<<", AX"<<endl;
 			}
 			//
 	}
@@ -281,6 +282,9 @@ string Check_state_machine(SymbolInfo* head,string check){
 		{
 			check="param_calculation";
 		}
+
+		if(name_type(head)=="statement : RETURN expression SEMICOLON" && check=="inside_function")
+			check="return";
 			
 		
 		
@@ -316,6 +320,16 @@ string Check_state_machine(SymbolInfo* head,string check){
 
 //--------writter_parent------------------------------------------------------------------------------------
 void asmWriter_parent(SymbolInfo* head, string check){
+
+
+		if(name_type(head)=="unit : func_definition" && code==false)
+		{	
+			asmWriter<<".CODE"<<endl;
+			
+			code=true;
+		}
+
+
 		
 		if(name_type(head)=="start : program")
 			asm_program();
@@ -382,9 +396,6 @@ void asmWriter_parent(SymbolInfo* head, string check){
 		}
 		if(head->getType()=="ID"&& check=="inside_param")
 			{
-				//symbolTable->Insert(head->getName(),"parameter");
-				//temp1=symbolTable->Look_Up(head->getName());
-				//temp1->stack_offset=
 				function_param_count++;
 				param_stack.push_back(head->getName());
 			}
@@ -395,7 +406,7 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				curly_brace_count--;
 				if(curly_brace_count==0){
 					asm_function_end();
-					//symbolTable->Exit();
+					symbolTable->Exit();
 				}
 					
 
@@ -413,21 +424,25 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				stack_back_offset=stack_back_offset+2;
 				}
 			}
-
+		if(head->getType()=="ID" && check=="return")
+			{
+				temp1=symbolTable->Look_Up(head->getName());
+				if(temp1->getType()=="local_var"){
+					if(temp1->stack_offset>0)
+						asmWriter<<"	MOV AX, [BP-"<<to_string(temp1->stack_offset)<<"]"<<endl;
+					else
+						asmWriter<<"	MOV AX, [BP+"<<to_string(-temp1->stack_offset)<<"]"<<endl;
+				}		
+				if(temp1->getType()=="global_var"){
+					asmWriter<<"	MOV AX, "<<head->getName()<<endl;
+				}
+			}
 
 		//expression-----------------------------
 
 		if(head->getType()=="ID" && check=="var_assign_id")
 			{
-				// temp1=symbolTable->Look_Up(head->getName());
-				// if(temp1->getType()=="local_var"){
-				// 	asmWriter<<"	MOV AX, [BP-"<<temp1->stack_offset<<"]"<<endl;
-				// 	asmWriter<<"	PUSH AX"<<endl;
-				// }		
-				// if(temp1->getType()=="global_var"){
-				// 	asmWriter<<"	MOV AX, "<<head->getName()<<endl;
-				// 	asmWriter<<"	PUSH AX";
-				// }
+				
 				temp1=symbolTable->Look_Up(head->getName());
 				if(temp1->getType()=="local_var"){
 					if(temp1->stack_offset>0)
@@ -447,9 +462,10 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				temp1=symbolTable->Look_Up(head->getName());
 				if(temp1->getType()=="local_var"){
 					if(temp1->stack_offset>0)
-					temp_assign="[BP-"+to_string(temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP-"<<to_string(temp1->stack_offset)<<"]"<<endl;
 					else
-					temp_assign="[BP+"+to_string(-temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP+"<<to_string(-temp1->stack_offset)<<"]"<<endl;
+
 					asmWriter<<"	PUSH AX"<<endl;
 				}		
 				if(temp1->getType()=="global_var"){
@@ -489,9 +505,9 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				temp1=symbolTable->Look_Up(head->getName());
 				if(temp1->getType()=="local_var"){
 					if(temp1->stack_offset>0)
-					temp_assign="[BP-"+to_string(temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP-"<<to_string(temp1->stack_offset)<<"]"<<endl;
 					else
-					temp_assign="[BP+"+to_string(-temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP+"<<to_string(-temp1->stack_offset)<<"]"<<endl;
 					asmWriter<<"	PUSH AX"<<endl;
 				}		
 				if(temp1->getType()=="global_var"){
@@ -548,7 +564,7 @@ void deleteTree(SymbolInfo* head){
 
 
 
-#line 552 "y.tab.c"
+#line 568 "y.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -683,11 +699,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 482 "1905114.y"
+#line 498 "1905114.y"
 
 	SymbolInfo* symbol_info;	
 
-#line 691 "y.tab.c"
+#line 707 "y.tab.c"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -1162,13 +1178,13 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   495,   495,   512,   521,   531,   539,   547,   557,   570,
-     584,   597,   612,   623,   633,   642,   653,   663,   674,   686,
-     694,   702,   712,   723,   736,   745,   758,   766,   777,   785,
-     793,   801,   815,   828,   843,   855,   867,   879,   887,   898,
-     906,   919,   927,   939,   947,   959,   967,   979,   987,   999,
-    1007,  1020,  1030,  1040,  1051,  1060,  1072,  1083,  1092,  1101,
-    1111,  1123,  1132,  1141,  1152
+       0,   511,   511,   529,   538,   548,   556,   564,   574,   587,
+     601,   614,   629,   640,   650,   659,   670,   680,   691,   703,
+     711,   719,   729,   740,   753,   762,   775,   783,   794,   802,
+     810,   818,   832,   845,   860,   872,   884,   896,   904,   915,
+     923,   936,   944,   956,   964,   976,   984,   996,  1004,  1016,
+    1024,  1037,  1047,  1057,  1068,  1077,  1089,  1100,  1109,  1118,
+    1128,  1140,  1149,  1158,  1169
 };
 #endif
 
@@ -1820,7 +1836,7 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* start: program  */
-#line 496 "1905114.y"
+#line 512 "1905114.y"
         {
 		(yyval.symbol_info)=new SymbolInfo("start","program");
 		(yyval.symbol_info)->sl=(yyvsp[0].symbol_info)->sl;
@@ -1829,17 +1845,18 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		printTree((yyval.symbol_info),0,"start");
+		asmWriter<<"END main"<<endl;
 
 		symbolTable->Print_All_Scope_Table();
 		deleteTree((yyval.symbol_info));
 		//write your code in this block in all the similar blocks below
 		
 	}
-#line 1839 "y.tab.c"
+#line 1856 "y.tab.c"
     break;
 
   case 3: /* program: program unit  */
-#line 512 "1905114.y"
+#line 529 "1905114.y"
                        {
 		writer2<<"program : program unit"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("program","program unit");
@@ -1849,11 +1866,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1853 "y.tab.c"
+#line 1870 "y.tab.c"
     break;
 
   case 4: /* program: unit  */
-#line 521 "1905114.y"
+#line 538 "1905114.y"
                {
 		writer2<<"program : unit"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("program","unit");
@@ -1862,11 +1879,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1866 "y.tab.c"
+#line 1883 "y.tab.c"
     break;
 
   case 5: /* unit: var_declaration  */
-#line 531 "1905114.y"
+#line 548 "1905114.y"
                        {
 		writer2<<"unit : var_declaration"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("unit","var_declaration");
@@ -1875,11 +1892,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1879 "y.tab.c"
+#line 1896 "y.tab.c"
     break;
 
   case 6: /* unit: func_declaration  */
-#line 539 "1905114.y"
+#line 556 "1905114.y"
                        {
 		writer2<<"unit : func_declaration"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("unit","func_declaration");
@@ -1888,11 +1905,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1892 "y.tab.c"
+#line 1909 "y.tab.c"
     break;
 
   case 7: /* unit: func_definition  */
-#line 547 "1905114.y"
+#line 564 "1905114.y"
                       {
 		writer2<<"unit : func_definition"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("unit","func_definition");
@@ -1901,11 +1918,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1905 "y.tab.c"
+#line 1922 "y.tab.c"
     break;
 
   case 8: /* func_declaration: type_specifier ID LPAREN parameter_list RPAREN SEMICOLON  */
-#line 557 "1905114.y"
+#line 574 "1905114.y"
                                                                             {
 		writer2<<"func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("func_declaration","type_specifier ID LPAREN parameter_list RPAREN SEMICOLON");
@@ -1919,11 +1936,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1923 "y.tab.c"
+#line 1940 "y.tab.c"
     break;
 
   case 9: /* func_declaration: type_specifier ID LPAREN RPAREN SEMICOLON  */
-#line 570 "1905114.y"
+#line 587 "1905114.y"
                                                     {
 		writer2<<"func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("func_declaration","type_specifier ID LPAREN RPAREN SEMICOLON");
@@ -1936,11 +1953,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1940 "y.tab.c"
+#line 1957 "y.tab.c"
     break;
 
   case 10: /* func_definition: type_specifier ID LPAREN parameter_list RPAREN compound_statement  */
-#line 584 "1905114.y"
+#line 601 "1905114.y"
                                                                                     {
 		writer2<<"func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("func_definition","type_specifier ID LPAREN parameter_list RPAREN compound_statement");
@@ -1954,11 +1971,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1958 "y.tab.c"
+#line 1975 "y.tab.c"
     break;
 
   case 11: /* func_definition: type_specifier ID LPAREN RPAREN compound_statement  */
-#line 597 "1905114.y"
+#line 614 "1905114.y"
                                                              {
 		writer2<<"func_definition : type_specifier ID LPAREN RPAREN compound_statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("func_definition","type_specifier ID LPAREN RPAREN compound_statement");
@@ -1971,11 +1988,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1975 "y.tab.c"
+#line 1992 "y.tab.c"
     break;
 
   case 12: /* parameter_list: parameter_list COMMA type_specifier ID  */
-#line 612 "1905114.y"
+#line 629 "1905114.y"
                                                          {
 		writer2<<"parameter_list : parameter_list COMMA type_specifier ID"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("parameter_list","parameter_list COMMA type_specifier ID");
@@ -1987,11 +2004,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 1991 "y.tab.c"
+#line 2008 "y.tab.c"
     break;
 
   case 13: /* parameter_list: parameter_list COMMA type_specifier  */
-#line 623 "1905114.y"
+#line 640 "1905114.y"
                                               {
 		writer2<<"parameter_list : parameter_list COMMA type_specifier"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("parameter_list","parameter_list COMMA type_specifier");
@@ -2002,11 +2019,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2006 "y.tab.c"
+#line 2023 "y.tab.c"
     break;
 
   case 14: /* parameter_list: type_specifier ID  */
-#line 633 "1905114.y"
+#line 650 "1905114.y"
                             {
 		writer2<<"parameter_list : type_specifier ID"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("parameter_list","type_specifier ID");
@@ -2016,11 +2033,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2020 "y.tab.c"
+#line 2037 "y.tab.c"
     break;
 
   case 15: /* parameter_list: type_specifier  */
-#line 642 "1905114.y"
+#line 659 "1905114.y"
                          {
 		writer2<<"parameter_list : type_specifier"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("parameter_list","type_specifier");
@@ -2029,11 +2046,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2033 "y.tab.c"
+#line 2050 "y.tab.c"
     break;
 
   case 16: /* compound_statement: LCURL statements RCURL  */
-#line 653 "1905114.y"
+#line 670 "1905114.y"
                                             {
 	writer2<<"compound_statement : LCURL statements RCURL"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("compound_statement","LCURL statements RCURL");
@@ -2044,11 +2061,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2048 "y.tab.c"
+#line 2065 "y.tab.c"
     break;
 
   case 17: /* compound_statement: LCURL RCURL  */
-#line 663 "1905114.y"
+#line 680 "1905114.y"
                       {
 		writer2<<"compound_statement : LCURL RCURL"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("compound_statement","LCURL RCURL");
@@ -2058,11 +2075,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2062 "y.tab.c"
+#line 2079 "y.tab.c"
     break;
 
   case 18: /* var_declaration: type_specifier declaration_list SEMICOLON  */
-#line 674 "1905114.y"
+#line 691 "1905114.y"
                                                             {
 		writer2<<"var_declaration : type_specifier declaration_list SEMICOLON"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("var_declaration","type_specifier declaration_list SEMICOLON");
@@ -2073,11 +2090,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2077 "y.tab.c"
+#line 2094 "y.tab.c"
     break;
 
   case 19: /* type_specifier: INT  */
-#line 686 "1905114.y"
+#line 703 "1905114.y"
                       {
 		writer2<<"type_specifier : INT"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("type_specifier","INT");
@@ -2086,11 +2103,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2090 "y.tab.c"
+#line 2107 "y.tab.c"
     break;
 
   case 20: /* type_specifier: FLOAT  */
-#line 694 "1905114.y"
+#line 711 "1905114.y"
                 {
 		writer2<<"type_specifier : FLOAT"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("type_specifier","FLOAT");
@@ -2099,11 +2116,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2103 "y.tab.c"
+#line 2120 "y.tab.c"
     break;
 
   case 21: /* type_specifier: VOID  */
-#line 702 "1905114.y"
+#line 719 "1905114.y"
                {
 		writer2<<"type_specifier : VOID"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("type_specifier","VOID");
@@ -2112,11 +2129,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2116 "y.tab.c"
+#line 2133 "y.tab.c"
     break;
 
   case 22: /* declaration_list: declaration_list COMMA ID  */
-#line 712 "1905114.y"
+#line 729 "1905114.y"
                                              {
 		writer2<<"declaration_list : declaration_list COMMA ID"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("declaration_list","declaration_list COMMA ID");
@@ -2128,11 +2145,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 
 		}
-#line 2132 "y.tab.c"
+#line 2149 "y.tab.c"
     break;
 
   case 23: /* declaration_list: declaration_list COMMA ID LTHIRD CONST_INT RTHIRD  */
-#line 723 "1905114.y"
+#line 740 "1905114.y"
                                                             {
 		writer2<<"declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("declaration_list","declaration_list COMMA ID LTHIRD CONST_INT RTHIRD");
@@ -2146,11 +2163,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2150 "y.tab.c"
+#line 2167 "y.tab.c"
     break;
 
   case 24: /* declaration_list: ID  */
-#line 736 "1905114.y"
+#line 753 "1905114.y"
              {
 		writer2<<"declaration_list : ID"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("declaration_list","ID");
@@ -2160,11 +2177,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 
 		}
-#line 2164 "y.tab.c"
+#line 2181 "y.tab.c"
     break;
 
   case 25: /* declaration_list: ID LTHIRD CONST_INT RTHIRD  */
-#line 745 "1905114.y"
+#line 762 "1905114.y"
                                      {
 		writer2<<"declaration_list : ID LTHIRD CONST_INT RTHIRD"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("declaration_list","ID LTHIRD CONST_INT RTHIRD");
@@ -2176,11 +2193,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2180 "y.tab.c"
+#line 2197 "y.tab.c"
     break;
 
   case 26: /* statements: statement  */
-#line 758 "1905114.y"
+#line 775 "1905114.y"
                        {
 		writer2<<"statements : statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statements","statement");
@@ -2189,11 +2206,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2193 "y.tab.c"
+#line 2210 "y.tab.c"
     break;
 
   case 27: /* statements: statements statement  */
-#line 766 "1905114.y"
+#line 783 "1905114.y"
                                {
 		writer2<<"statements : statements statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statements","statements statement");
@@ -2203,11 +2220,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2207 "y.tab.c"
+#line 2224 "y.tab.c"
     break;
 
   case 28: /* statement: var_declaration  */
-#line 777 "1905114.y"
+#line 794 "1905114.y"
                             {
 		writer2<<"statement : var_declaration"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","var_declaration");
@@ -2216,11 +2233,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2220 "y.tab.c"
+#line 2237 "y.tab.c"
     break;
 
   case 29: /* statement: expression_statement  */
-#line 785 "1905114.y"
+#line 802 "1905114.y"
                                {
 		writer2<<"statement : expression_statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","expression_statement");
@@ -2229,11 +2246,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2233 "y.tab.c"
+#line 2250 "y.tab.c"
     break;
 
   case 30: /* statement: compound_statement  */
-#line 793 "1905114.y"
+#line 810 "1905114.y"
                              {
 		writer2<<"statement : compound_statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","compound_statement");
@@ -2242,11 +2259,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2246 "y.tab.c"
+#line 2263 "y.tab.c"
     break;
 
   case 31: /* statement: FOR LPAREN expression_statement expression_statement expression RPAREN statement  */
-#line 801 "1905114.y"
+#line 818 "1905114.y"
                                                                                            {
 		writer2<<"statement : FOR LPAREN expression_statement expression_statement expression RPAREN statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","FOR LPAREN expression_statement expression_statement expression RPAREN statement");
@@ -2261,11 +2278,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2265 "y.tab.c"
+#line 2282 "y.tab.c"
     break;
 
   case 32: /* statement: IF LPAREN expression RPAREN statement  */
-#line 815 "1905114.y"
+#line 832 "1905114.y"
                                                                       {
 		writer2<<"statement : IF LPAREN expression RPAREN statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","IF LPAREN expression RPAREN statement");
@@ -2279,11 +2296,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 
 		}
-#line 2283 "y.tab.c"
+#line 2300 "y.tab.c"
     break;
 
   case 33: /* statement: IF LPAREN expression RPAREN statement ELSE statement  */
-#line 828 "1905114.y"
+#line 845 "1905114.y"
                                                                {
 		writer2<<"statement : IF LPAREN expression RPAREN statement ELSE statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","IF LPAREN expression RPAREN statement ELSE statement");
@@ -2299,11 +2316,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 
 		}
-#line 2303 "y.tab.c"
+#line 2320 "y.tab.c"
     break;
 
   case 34: /* statement: WHILE LPAREN expression RPAREN statement  */
-#line 843 "1905114.y"
+#line 860 "1905114.y"
                                                    {
 		writer2<<"statement : WHILE LPAREN expression RPAREN statement"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","WHILE LPAREN expression RPAREN statement");
@@ -2316,11 +2333,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2320 "y.tab.c"
+#line 2337 "y.tab.c"
     break;
 
   case 35: /* statement: PRINTLN LPAREN ID RPAREN SEMICOLON  */
-#line 855 "1905114.y"
+#line 872 "1905114.y"
                                              {
 		writer2<<"statement : PRINTLN LPAREN ID RPAREN SEMICOLON"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","PRINTLN LPAREN ID RPAREN SEMICOLON");
@@ -2333,11 +2350,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2337 "y.tab.c"
+#line 2354 "y.tab.c"
     break;
 
   case 36: /* statement: RETURN expression SEMICOLON  */
-#line 867 "1905114.y"
+#line 884 "1905114.y"
                                       {
 		writer2<<"statement : RETURN expression SEMICOLON"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("statement","RETURN expression SEMICOLON");
@@ -2348,11 +2365,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2352 "y.tab.c"
+#line 2369 "y.tab.c"
     break;
 
   case 37: /* expression_statement: SEMICOLON  */
-#line 879 "1905114.y"
+#line 896 "1905114.y"
                                         {
 		writer2<<"expression_statement : SEMICOLON"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("expression_statement","SEMICOLON");
@@ -2361,11 +2378,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2365 "y.tab.c"
+#line 2382 "y.tab.c"
     break;
 
   case 38: /* expression_statement: expression SEMICOLON  */
-#line 887 "1905114.y"
+#line 904 "1905114.y"
                                {
 		writer2<<"expression_statement : expression SEMICOLON"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("expression_statement","expression SEMICOLON");
@@ -2375,11 +2392,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2379 "y.tab.c"
+#line 2396 "y.tab.c"
     break;
 
   case 39: /* variable: ID  */
-#line 898 "1905114.y"
+#line 915 "1905114.y"
               {
 		writer2<<"variable : ID"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("variable","ID");
@@ -2388,11 +2405,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2392 "y.tab.c"
+#line 2409 "y.tab.c"
     break;
 
   case 40: /* variable: ID LTHIRD expression RTHIRD  */
-#line 906 "1905114.y"
+#line 923 "1905114.y"
                                       {
 		writer2<<"variable : ID LTHIRD expression RTHIRD"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("variable","ID LTHIRD expression RTHIRD");
@@ -2404,11 +2421,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2408 "y.tab.c"
+#line 2425 "y.tab.c"
     break;
 
   case 41: /* expression: logic_expression  */
-#line 919 "1905114.y"
+#line 936 "1905114.y"
                                 {
 		writer2<<"expression : logic_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("expression","logic_expression");
@@ -2417,11 +2434,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2421 "y.tab.c"
+#line 2438 "y.tab.c"
     break;
 
   case 42: /* expression: variable ASSIGNOP logic_expression  */
-#line 927 "1905114.y"
+#line 944 "1905114.y"
                                              {
 		writer2<<"expression : variable ASSIGNOP logic_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("expression","variable ASSIGNOP logic_expression");
@@ -2432,11 +2449,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2436 "y.tab.c"
+#line 2453 "y.tab.c"
     break;
 
   case 43: /* logic_expression: rel_expression  */
-#line 939 "1905114.y"
+#line 956 "1905114.y"
                                         {
 		writer2<<"logic_expression : rel_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("logic_expression","rel_expression");
@@ -2445,11 +2462,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2449 "y.tab.c"
+#line 2466 "y.tab.c"
     break;
 
   case 44: /* logic_expression: rel_expression LOGICOP rel_expression  */
-#line 947 "1905114.y"
+#line 964 "1905114.y"
                                                 {
 		writer2<<"logic_expression : rel_expression LOGICOP rel_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("logic_expression","rel_expression LOGICOP rel_expression");
@@ -2460,11 +2477,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2464 "y.tab.c"
+#line 2481 "y.tab.c"
     break;
 
   case 45: /* rel_expression: simple_expression  */
-#line 959 "1905114.y"
+#line 976 "1905114.y"
                                     {
 		writer2<<"rel_expression : simple_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("rel_expression","simple_expression");
@@ -2473,11 +2490,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2477 "y.tab.c"
+#line 2494 "y.tab.c"
     break;
 
   case 46: /* rel_expression: simple_expression RELOP simple_expression  */
-#line 967 "1905114.y"
+#line 984 "1905114.y"
                                                     {
 		writer2<<"rel_expression : simple_expression RELOP simple_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("rel_expression","simple_expression RELOP simple_expression");
@@ -2488,11 +2505,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2492 "y.tab.c"
+#line 2509 "y.tab.c"
     break;
 
   case 47: /* simple_expression: term  */
-#line 979 "1905114.y"
+#line 996 "1905114.y"
                          {
 		writer2<<"simple_expression : term"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("simple_expression","term");
@@ -2501,11 +2518,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2505 "y.tab.c"
+#line 2522 "y.tab.c"
     break;
 
   case 48: /* simple_expression: simple_expression ADDOP term  */
-#line 987 "1905114.y"
+#line 1004 "1905114.y"
                                        {
 		writer2<<"simple_expression : simple_expression ADDOP term"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("simple_expression","simple_expression ADDOP term");
@@ -2516,11 +2533,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2520 "y.tab.c"
+#line 2537 "y.tab.c"
     break;
 
   case 49: /* term: unary_expression  */
-#line 999 "1905114.y"
+#line 1016 "1905114.y"
                          {
 		writer2<<"term : unary_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("term","unary_expression");
@@ -2529,11 +2546,11 @@ yyreduce:
 		(yyval.symbol_info)->children.push_back((yyvsp[0].symbol_info));
 		(yyval.symbol_info)->isLeaf=false;
 		}
-#line 2533 "y.tab.c"
+#line 2550 "y.tab.c"
     break;
 
   case 50: /* term: term MULOP unary_expression  */
-#line 1007 "1905114.y"
+#line 1024 "1905114.y"
                                    {
 		writer2<<"term : term MULOP unary_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("term","term MULOP unary_expression");
@@ -2545,11 +2562,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2549 "y.tab.c"
+#line 2566 "y.tab.c"
     break;
 
   case 51: /* unary_expression: ADDOP unary_expression  */
-#line 1020 "1905114.y"
+#line 1037 "1905114.y"
                                           {
 		writer2<<"unary_expression : ADDOP unary_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("unary_expression","ADDOP unary_expression");
@@ -2560,11 +2577,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2564 "y.tab.c"
+#line 2581 "y.tab.c"
     break;
 
   case 52: /* unary_expression: NOT unary_expression  */
-#line 1030 "1905114.y"
+#line 1047 "1905114.y"
                                {
 		writer2<<"unary_expression : NOT unary_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("unary_expression","NOT unary_expression");
@@ -2575,11 +2592,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2579 "y.tab.c"
+#line 2596 "y.tab.c"
     break;
 
   case 53: /* unary_expression: factor  */
-#line 1040 "1905114.y"
+#line 1057 "1905114.y"
                  {
 		writer2<<"unary_expression : factor"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("unary_expression","factor");
@@ -2589,11 +2606,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2593 "y.tab.c"
+#line 2610 "y.tab.c"
     break;
 
   case 54: /* factor: variable  */
-#line 1051 "1905114.y"
+#line 1068 "1905114.y"
                    {
 		writer2<<"factor : variable"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("factor","variable");
@@ -2603,11 +2620,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2607 "y.tab.c"
+#line 2624 "y.tab.c"
     break;
 
   case 55: /* factor: ID LPAREN argument_list RPAREN  */
-#line 1060 "1905114.y"
+#line 1077 "1905114.y"
                                         {
 		writer2<<"factor : ID LPAREN argument_list RPAREN"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("factor","ID LPAREN argument_list RPAREN");
@@ -2620,11 +2637,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2624 "y.tab.c"
+#line 2641 "y.tab.c"
     break;
 
   case 56: /* factor: LPAREN expression RPAREN  */
-#line 1072 "1905114.y"
+#line 1089 "1905114.y"
                                   {
 		writer2<<"factor : ID LPAREN argument_list RPAREN"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("factor","LPAREN expression RPAREN");
@@ -2636,11 +2653,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2640 "y.tab.c"
+#line 2657 "y.tab.c"
     break;
 
   case 57: /* factor: CONST_INT  */
-#line 1083 "1905114.y"
+#line 1100 "1905114.y"
                    {
 		writer2<<"factor : CONST_INT"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("factor","CONST_INT");
@@ -2650,11 +2667,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2654 "y.tab.c"
+#line 2671 "y.tab.c"
     break;
 
   case 58: /* factor: CONST_FLOAT  */
-#line 1092 "1905114.y"
+#line 1109 "1905114.y"
                      {
 		writer2<<"factor : CONST_FLOAT"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("factor","CONST_FLOAT");
@@ -2664,11 +2681,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2668 "y.tab.c"
+#line 2685 "y.tab.c"
     break;
 
   case 59: /* factor: variable INCOP  */
-#line 1101 "1905114.y"
+#line 1118 "1905114.y"
                         {
 		writer2<<"factor : variable INCOP"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("factor","variable INCOP");
@@ -2679,11 +2696,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2683 "y.tab.c"
+#line 2700 "y.tab.c"
     break;
 
   case 60: /* factor: variable DECOP  */
-#line 1111 "1905114.y"
+#line 1128 "1905114.y"
                         {
 		writer2<<"factor : variable DECOP"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("factor","variable DECOP");
@@ -2694,11 +2711,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2698 "y.tab.c"
+#line 2715 "y.tab.c"
     break;
 
   case 61: /* argument_list: arguments  */
-#line 1123 "1905114.y"
+#line 1140 "1905114.y"
                          {
 		writer2<<"argument_list : arguments"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("argument_list","arguments");
@@ -2708,11 +2725,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2712 "y.tab.c"
+#line 2729 "y.tab.c"
     break;
 
   case 62: /* argument_list: %empty  */
-#line 1132 "1905114.y"
+#line 1149 "1905114.y"
           {
 		writer2<<"argument_list : ephsilon"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("argument_list","ephsilon");
@@ -2720,11 +2737,11 @@ yyreduce:
 		(yyval.symbol_info)->el=line_count;
 		(yyval.symbol_info)->isLeaf=true;
 	}
-#line 2724 "y.tab.c"
+#line 2741 "y.tab.c"
     break;
 
   case 63: /* arguments: arguments COMMA logic_expression  */
-#line 1141 "1905114.y"
+#line 1158 "1905114.y"
                                             {
 		writer2<<"arguments : arguments COMMA logic_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("arguments","arguments COMMA logic_expression");
@@ -2736,11 +2753,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2740 "y.tab.c"
+#line 2757 "y.tab.c"
     break;
 
   case 64: /* arguments: logic_expression  */
-#line 1152 "1905114.y"
+#line 1169 "1905114.y"
                           {
 		writer2<<"arguments : logic_expression"<<endl;
 		(yyval.symbol_info)=new SymbolInfo("arguments","logic_expression");
@@ -2750,11 +2767,11 @@ yyreduce:
 		(yyval.symbol_info)->isLeaf=false;
 		
 		}
-#line 2754 "y.tab.c"
+#line 2771 "y.tab.c"
     break;
 
 
-#line 2758 "y.tab.c"
+#line 2775 "y.tab.c"
 
       default: break;
     }
@@ -2947,7 +2964,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 1164 "1905114.y"
+#line 1181 "1905114.y"
 
 int main(int argc,char *argv[])
 {

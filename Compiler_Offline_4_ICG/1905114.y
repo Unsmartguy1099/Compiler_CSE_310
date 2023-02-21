@@ -37,6 +37,7 @@ int curly_brace_count=0;
 string current_function="";
 int function_param_count=0;
 vector<string> op_stack;
+bool code=false;
 
 
 bool is_inside_expression_statement=false;
@@ -139,7 +140,7 @@ void asm_expression(){
 		if(temp=="=")
 			{	
 				asmWriter<<"	POP AX"<<endl;
-				asmWriter<<"	MOV"<<temp_assign<<", AX"<<endl;
+				asmWriter<<"	MOV "<<temp_assign<<", AX"<<endl;
 			}
 			//
 	}
@@ -211,6 +212,9 @@ string Check_state_machine(SymbolInfo* head,string check){
 		{
 			check="param_calculation";
 		}
+
+		if(name_type(head)=="statement : RETURN expression SEMICOLON" && check=="inside_function")
+			check="return";
 			
 		
 		
@@ -246,6 +250,16 @@ string Check_state_machine(SymbolInfo* head,string check){
 
 //--------writter_parent------------------------------------------------------------------------------------
 void asmWriter_parent(SymbolInfo* head, string check){
+
+
+		if(name_type(head)=="unit : func_definition" && code==false)
+		{	
+			asmWriter<<".CODE"<<endl;
+			
+			code=true;
+		}
+
+
 		
 		if(name_type(head)=="start : program")
 			asm_program();
@@ -312,9 +326,6 @@ void asmWriter_parent(SymbolInfo* head, string check){
 		}
 		if(head->getType()=="ID"&& check=="inside_param")
 			{
-				//symbolTable->Insert(head->getName(),"parameter");
-				//temp1=symbolTable->Look_Up(head->getName());
-				//temp1->stack_offset=
 				function_param_count++;
 				param_stack.push_back(head->getName());
 			}
@@ -325,7 +336,7 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				curly_brace_count--;
 				if(curly_brace_count==0){
 					asm_function_end();
-					//symbolTable->Exit();
+					symbolTable->Exit();
 				}
 					
 
@@ -343,21 +354,25 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				stack_back_offset=stack_back_offset+2;
 				}
 			}
-
+		if(head->getType()=="ID" && check=="return")
+			{
+				temp1=symbolTable->Look_Up(head->getName());
+				if(temp1->getType()=="local_var"){
+					if(temp1->stack_offset>0)
+						asmWriter<<"	MOV AX, [BP-"<<to_string(temp1->stack_offset)<<"]"<<endl;
+					else
+						asmWriter<<"	MOV AX, [BP+"<<to_string(-temp1->stack_offset)<<"]"<<endl;
+				}		
+				if(temp1->getType()=="global_var"){
+					asmWriter<<"	MOV AX, "<<head->getName()<<endl;
+				}
+			}
 
 		//expression-----------------------------
 
 		if(head->getType()=="ID" && check=="var_assign_id")
 			{
-				// temp1=symbolTable->Look_Up(head->getName());
-				// if(temp1->getType()=="local_var"){
-				// 	asmWriter<<"	MOV AX, [BP-"<<temp1->stack_offset<<"]"<<endl;
-				// 	asmWriter<<"	PUSH AX"<<endl;
-				// }		
-				// if(temp1->getType()=="global_var"){
-				// 	asmWriter<<"	MOV AX, "<<head->getName()<<endl;
-				// 	asmWriter<<"	PUSH AX";
-				// }
+				
 				temp1=symbolTable->Look_Up(head->getName());
 				if(temp1->getType()=="local_var"){
 					if(temp1->stack_offset>0)
@@ -377,9 +392,10 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				temp1=symbolTable->Look_Up(head->getName());
 				if(temp1->getType()=="local_var"){
 					if(temp1->stack_offset>0)
-					temp_assign="[BP-"+to_string(temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP-"<<to_string(temp1->stack_offset)<<"]"<<endl;
 					else
-					temp_assign="[BP+"+to_string(-temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP+"<<to_string(-temp1->stack_offset)<<"]"<<endl;
+
 					asmWriter<<"	PUSH AX"<<endl;
 				}		
 				if(temp1->getType()=="global_var"){
@@ -419,9 +435,9 @@ void asmWriter_parent(SymbolInfo* head, string check){
 				temp1=symbolTable->Look_Up(head->getName());
 				if(temp1->getType()=="local_var"){
 					if(temp1->stack_offset>0)
-					temp_assign="[BP-"+to_string(temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP-"<<to_string(temp1->stack_offset)<<"]"<<endl;
 					else
-					temp_assign="[BP+"+to_string(-temp1->stack_offset)+"]";
+					asmWriter<<"	MOV AX, [BP+"<<to_string(-temp1->stack_offset)<<"]"<<endl;
 					asmWriter<<"	PUSH AX"<<endl;
 				}		
 				if(temp1->getType()=="global_var"){
@@ -501,6 +517,7 @@ start : program
 		$$->isLeaf=false;
 		
 		printTree($$,0,"start");
+		asmWriter<<"END main"<<endl;
 
 		symbolTable->Print_All_Scope_Table();
 		deleteTree($$);

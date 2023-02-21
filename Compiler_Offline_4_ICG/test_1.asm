@@ -10,19 +10,21 @@
 	a DW 1 DUP (0000H)
 	b DW 1 DUP (0000H)
 	c DW 1 DUP (0000H)
+.CODE
 func_a PROC
 	PUSH BP
 	MOV BP, SP
 	MOV AX, 7
 	PUSH AX
 	POP AX
-	MOVa, AX
+	MOV a, AX
 	POP BP
 	RET
 func_a ENDP
 foo PROC
 	PUSH BP
 	MOV BP, SP
+	MOV AX, [BP+4]
 	PUSH AX
 	MOV AX, 3
 	PUSH AX
@@ -31,7 +33,8 @@ foo PROC
 	ADD AX, BX
 	PUSH AX
 	POP AX
-	MOV[BP+4], AX
+	MOV [BP+4], AX
+	MOV AX, [BP+4]
 	POP BP
 	RET 1
 foo ENDP
@@ -40,9 +43,11 @@ bar PROC
 	MOV BP, SP
 	MOV AX, 4
 	PUSH AX
+	MOV AX, [BP+6]
 	PUSH AX
 	MOV AX, 2
 	PUSH AX
+	MOV AX, [BP+4]
 	PUSH AX
 	POP CX
 	POP AX
@@ -61,7 +66,8 @@ bar PROC
 	MOV AX, CX
 	PUSH AX
 	POP AX
-	MOV[BP+4], AX
+	MOV c, AX
+	MOV AX, c
 	POP BP
 	RET 2
 bar ENDP
@@ -77,25 +83,30 @@ main PROC
 	MOV AX, 5
 	PUSH AX
 	POP AX
-	MOV[BP-2], AX
+	MOV [BP-2], AX
 	MOV AX, 6
 	PUSH AX
 	POP AX
-	MOV[BP-4], AX
+	MOV [BP-4], AX
+	MOV AX, [BP-2]
 	PUSH AX
 	CALL foo
 	PUSH AX
 	POP AX
-	MOV[BP-2], AX
+	MOV [BP-6], AX
+	MOV AX, [BP-2]
 	PUSH AX
+	MOV AX, [BP-4]
 	PUSH AX
 	CALL bar
 	PUSH AX
 	POP AX
-	MOV[BP-4], AX
+	MOV [BP-8], AX
 	MOV AX, 6
 	PUSH AX
+	MOV AX, [BP-2]
 	PUSH AX
+	MOV AX, [BP-4]
 	PUSH AX
 	CALL bar
 	PUSH AX
@@ -103,6 +114,7 @@ main PROC
 	PUSH AX
 	MOV AX, 3
 	PUSH AX
+	MOV AX, [BP-2]
 	PUSH AX
 	CALL foo
 	PUSH AX
@@ -127,9 +139,10 @@ main PROC
 	MOV AX, CX
 	PUSH AX
 	POP AX
-	MOV[BP-2], AX
+	MOV [BP-4], AX
 	ADD SP, 8
 	POP BP
 	MOV AX,4CH
 	INT 21H
 main ENDP
+END main
